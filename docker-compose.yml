@@ -43,6 +43,8 @@ services:
     image: node:24-alpine
     container_name: acg-web
     working_dir: /srv/web
+    environment:
+      API_PROXY_TARGET: http://api:8000
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "5173:5173"
