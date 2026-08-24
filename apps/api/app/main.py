@@ -93,12 +93,14 @@ def create_app() -> FastAPI:
     from app.demo.routes import router as demo_router
     from app.gateway.routes import router as gateway_router
     from app.onboarding.routes import router as onboarding_router
+    from app.transactions.metrics import router as metrics_router
     from app.transactions.payments import router as payments_router
     from app.transactions.routes import router as transactions_router
 
     app.include_router(onboarding_router)
     app.include_router(gateway_router)
     app.include_router(transactions_router)
+    app.include_router(metrics_router)
     app.include_router(payments_router)
     app.include_router(agent_router)
     app.include_router(demo_router)

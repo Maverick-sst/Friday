@@ -10,6 +10,7 @@ row. LLM/agent input can select *what* to buy; it can never set amounts.
 """
 
 import logging
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.adapters import get_commerce_adapter, get_payment_provider
 from app.core.errors import conflict, not_found
 from app.core.idempotency import with_idempotency
+from app.db.base import as_utc
 from app.db.models import (
     AgentSession,
     Merchant,
@@ -77,6 +79,15 @@ def _execute_checkout(
     quote_row: QuoteRow = get_quote_row_by_ref(db, req.quote_id)
     if quote_row.merchant_id != merchant.id or quote_row.session_id != session_row.session_id:
         raise not_found("QUOTE_NOT_IN_SESSION", "Quote does not belong to this session/merchant")
+
+    # Expired quotes never touch carts - block deterministically instead.
+    if as_utc(quote_row.expires_at) <= datetime.now(UTC):
+        return _block(
+            txn_service,
+            txn,
+            reason_codes=["QUOTE_EXPIRED"],
+            explanation="The quote expired before checkout.",
+        )
 
     # Resolve cart: explicit ref > open cart for this quote > implicit from quote.
     cart_row = None
@@ -209,6 +220,14 @@ def _block(
     explanation: str,
     checks: list[dict] | None = None,
 ) -> dict:
+    # The state machine routes every denial through POLICY_EVALUATED.
+    if txn.status != TransactionStatus.POLICY_EVALUATED.value:
+        txn_service.transition(
+            txn,
+            TransactionStatus.POLICY_EVALUATED,
+            actor=Actor.POLICY_ENGINE,
+            payload={"allowed": False, "short_circuit": reason_codes},
+        )
     txn_service.transition(
         txn,
         TransactionStatus.BLOCKED,
