@@ -2,12 +2,14 @@
 
 import logging
 import uuid
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.adapters import payment_provider_name
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 
@@ -26,10 +28,31 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         token = request_id_ctx.set(rid)
         try:
             response = await call_next(request)
+            response.headers["x-request-id"] = rid
+            return response
         finally:
             request_id_ctx.reset(token)
-        response.headers["x-request-id"] = rid
-        return response
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.app_env == "development":
+        # Dev convenience: guarantee the demo merchant exists.
+        from sqlalchemy import select
+
+        from app.db.models import Merchant
+        from app.db.seeds import seed_mock_merchant
+        from app.db.session import SessionLocal
+
+        try:
+            with SessionLocal() as db:
+                existing = db.scalar(select(Merchant).where(Merchant.slug == "velocity-sports"))
+                if existing is None:
+                    seed_mock_merchant(db)
+                    logger.info("dev autoseed created mock merchant")
+        except Exception as exc:
+            logger.warning(f"dev autoseed skipped: {exc}")
+    yield
 
 
 def create_app() -> FastAPI:
@@ -41,6 +64,7 @@ def create_app() -> FastAPI:
             "capabilities, deterministic policy enforcement, Razorpay test payments, "
             "and full transaction audit trails."
         ),
+        lifespan=lifespan,
     )
 
     app.add_middleware(RequestContextMiddleware)
@@ -55,10 +79,27 @@ def create_app() -> FastAPI:
 
     @app.get("/healthz", tags=["meta"])
     def health() -> dict:
-        return {"status": "ok", "env": settings.app_env}
+        return {
+            "status": "ok",
+            "env": settings.app_env,
+            "payment_provider": payment_provider_name(),
+        }
 
-    # Routers are registered here as phases land:
-    # onboarding, gateway, transactions, agent, demo.
+    # --- Routers ---------------------------------------------------------------
+    from app.agent.routes import router as agent_router
+    from app.demo.routes import router as demo_router
+    from app.gateway.routes import router as gateway_router
+    from app.onboarding.routes import router as onboarding_router
+    from app.transactions.payments import router as payments_router
+    from app.transactions.routes import router as transactions_router
+
+    app.include_router(onboarding_router)
+    app.include_router(gateway_router)
+    app.include_router(transactions_router)
+    app.include_router(payments_router)
+    app.include_router(agent_router)
+    app.include_router(demo_router)
+
     return app
 
 

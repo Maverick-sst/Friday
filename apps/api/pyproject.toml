@@ -1,0 +1,17 @@
+[project]
+name = "agent-commerce-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "W", "RUF"]
+ignore = [
+  "B008", # FastAPI Depends() in argument defaults is the framework idiom
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

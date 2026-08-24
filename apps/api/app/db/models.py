@@ -239,7 +239,10 @@ class Transaction(Base, TimestampMixin):
 class TransactionEvent(Base):
     __tablename__ = "transaction_events"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    # INTEGER on sqlite so rowid autoincrement works; BigInteger elsewhere.
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer(), "sqlite"), primary_key=True, autoincrement=True
+    )
     transaction_id: Mapped[str] = mapped_column(
         ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
     )

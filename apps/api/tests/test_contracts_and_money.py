@@ -59,7 +59,9 @@ class TestBuyerAuthorization:
 
     def test_expiry_field(self):
         now = datetime.now(UTC)
-        auth = BuyerAuthorization(max_amount_minor=500000, issued_at=now, expires_at=now + timedelta(minutes=30))
+        auth = BuyerAuthorization(
+            max_amount_minor=500000, issued_at=now, expires_at=now + timedelta(minutes=30)
+        )
         assert auth.expires_at > auth.issued_at
 
 
