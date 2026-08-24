@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     shopify_api_secret: str = ""
     shopify_scopes: str = "read_products,read_inventory,write_draft_orders,read_shop"
     shopify_redirect_uri: str = "http://localhost:8000/api/v1/onboarding/shopify/callback"
-    shopify_api_version: str = "2025-07"
+    shopify_api_version: str = "2026-07"
 
     # --- Razorpay ---
     razorpay_key_id: str = ""

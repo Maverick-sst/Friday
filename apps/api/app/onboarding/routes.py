@@ -4,7 +4,10 @@ V0 supports the mock provider (instant demo seed) and the Shopify OAuth
 connect flow (Phase 4 fills in the adapter implementation).
 """
 
-from fastapi import APIRouter, Depends
+import logging
+
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,6 +25,8 @@ from app.db.seeds import seed_mock_merchant
 from app.db.session import get_db
 from app.domain.enums import Capability as CapabilityEnum
 from app.services.profile_builder import build_profile
+
+logger = logging.getLogger("acg.onboarding")
 
 router = APIRouter(prefix="/api/v1", tags=["onboarding"])
 
@@ -74,6 +79,48 @@ def get_profile(merchant_id: str, db: Session = Depends(get_db)):
         "product_count": _product_count(db, merchant.id),
     }
     return payload
+
+
+@router.get("/onboarding/shopify/callback", include_in_schema=False)
+def shopify_callback(request: Request, db: Session = Depends(get_db)):
+    """OAuth install callback: verify HMAC + state, exchange code, onboard."""
+    from app.onboarding.shopify_connect import mark_synced, upsert_shopify_merchant
+    from app.onboarding.shopify_oauth import (
+        exchange_code_for_token,
+        read_state,
+        verify_callback_hmac,
+    )
+
+    params = dict(request.query_params)
+    if not verify_callback_hmac(params):
+        raise GatewayError("SHOPIFY_HMAC_INVALID", "Callback HMAC verification failed", 401)
+    if params.get("shop") is None or params.get("code") is None:
+        raise GatewayError("SHOPIFY_CALLBACK_INCOMPLETE", "Missing shop/code in callback", 400)
+
+    state = read_state(params.get("state", ""))
+    if state is None or state.get("shop") != params["shop"]:
+        raise GatewayError("SHOPIFY_STATE_INVALID", "OAuth state verification failed", 401)
+
+    shop_host = params["shop"]
+    token = exchange_code_for_token(shop_host, params["code"])
+
+    merchant = upsert_shopify_merchant(db, shop_host, token)
+    adapter = get_commerce_adapter("shopify")
+    try:
+        result = adapter.sync_catalog(db, merchant.id)
+    except Exception as exc:  # callback must stay resilient; retry sync from UI
+        logger.warning(f"post-install catalog sync deferred: {exc}")
+        db.commit()
+        return RedirectResponse(
+            url=f"{get_settings().web_origin}/profile?connected={merchant.slug}&sync=deferred"
+        )
+    merchant.status = "active"
+    mark_synced(db, merchant.id)
+    logger.info(
+        "shopify merchant connected",
+        extra={"extra_fields": {"slug": merchant.slug, "products": result.products_synced}},
+    )
+    return RedirectResponse(url=f"{get_settings().web_origin}/profile?connected={merchant.slug}")
 
 
 @router.post("/onboarding/demo-seed")

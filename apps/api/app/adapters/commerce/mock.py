@@ -16,7 +16,7 @@ from app.adapters.commerce.base import (
     SourceOrderResult,
     SyncResult,
 )
-from app.db.demo_overrides import DemoOverride
+from app.adapters.demo_support import apply_demo_override
 from app.db.models import Product, ProductVariant
 
 # Fixture catalog mirrors what we seed into the canonical DB. The mock adapter
@@ -70,31 +70,6 @@ MOCK_CATALOG: list[dict[str, Any]] = [
         ],
     },
 ]
-
-
-def _apply_demo_override(
-    db: Session, merchant_id: str, external_variant_id: str, state: LiveVariantState
-) -> LiveVariantState:
-    override = db.scalar(
-        select(DemoOverride).where(
-            DemoOverride.merchant_id == merchant_id,
-            DemoOverride.target_external_id == external_variant_id,
-            DemoOverride.active.is_(True),
-        )
-    )
-    if override is None:
-        return state
-    price, available, quantity = override.apply(
-        state.price_minor, state.available_for_sale, state.available_quantity
-    )
-    state.price_minor = price
-    state.available_for_sale = available
-    state.available_quantity = quantity
-    state.raw["demo_override"] = {
-        "id": override.id,
-        "note": override.note,
-    }
-    return state
 
 
 class MockAdapter:
@@ -172,7 +147,7 @@ class MockAdapter:
             available_quantity=row.available_quantity,
             raw={"provider": "mock"},
         )
-        return _apply_demo_override(db, merchant_id, variant_external_id, state)
+        return apply_demo_override(db, merchant_id, variant_external_id, state)
 
     def create_source_order(self, db: Session, merchant_id: str, order: dict[str, Any]) -> SourceOrderResult:
         self._counter += 1
