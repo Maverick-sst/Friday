@@ -84,6 +84,7 @@ class ProductVariant(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    external_id: str | None = None
     sku: str | None = None
     title: str | None = None
     options: dict[str, Any] = Field(default_factory=dict)
@@ -231,3 +232,4 @@ class StartAgentSessionRequest(BaseModel):
     currency: str = "INR"
     preferred_size: str | None = None
     preferred_category: str | None = None
+    demo_scenario: str | None = None

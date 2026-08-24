@@ -24,6 +24,7 @@ def _to_contract(product: Product, variants: list[ProductVariant]) -> ProductCon
         variants=[
             VariantContract(
                 id=v.id,
+                external_id=v.external_id,
                 sku=v.sku,
                 title=v.title,
                 options=dict(v.options_json or {}),

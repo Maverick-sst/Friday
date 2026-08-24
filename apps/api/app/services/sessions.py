@@ -33,6 +33,7 @@ def create_session(db: Session, req: StartAgentSessionRequest, merchant_id: str 
             "currency": req.currency,
             "preferred_size": req.preferred_size,
             "preferred_category": req.preferred_category,
+            "demo_scenario": req.demo_scenario,
         },
     )
     db.add(session)
