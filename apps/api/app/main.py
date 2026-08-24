@@ -37,14 +37,17 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if settings.app_env == "development":
-        # Dev convenience: guarantee the demo merchant exists.
+        # Dev convenience: guarantee schema + demo merchant exist.
         from sqlalchemy import select
 
-        from app.db.models import Merchant
+        from app.db.models import Base, Merchant
         from app.db.seeds import seed_mock_merchant
-        from app.db.session import SessionLocal
+        from app.db.session import SessionLocal, engine
 
         try:
+            if settings.database_url.startswith("sqlite"):
+                Base.metadata.create_all(engine)
+
             with SessionLocal() as db:
                 existing = db.scalar(select(Merchant).where(Merchant.slug == "velocity-sports"))
                 if existing is None:
