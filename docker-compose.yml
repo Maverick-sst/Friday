@@ -1,0 +1,57 @@
+name: agent-commerce
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: acg-db
+    environment:
+      POSTGRES_USER: agent_commerce
+      POSTGRES_PASSWORD: agent_commerce
+      POSTGRES_DB: agent_commerce
+    ports:
+      - "5439:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent_commerce -d agent_commerce"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: apps/api
+    container_name: acg-api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://agent_commerce:agent_commerce@db:5432/agent_commerce
+      WEB_ORIGIN: http://localhost:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/srv/api
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  web:
+    image: node:24-alpine
+    container_name: acg-web
+    working_dir: /srv/web
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/srv/web
+      - web_node_modules:/srv/web/node_modules
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  web_node_modules:

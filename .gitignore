@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# --- Node ---
+node_modules/
+dist/
+*.local
+
+# --- Env & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Databases / infra ---
+pgdata/
+*.sqlite3
+*.db
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# --- Build artifacts ---
+build/
+*.log
