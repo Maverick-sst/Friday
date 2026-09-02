@@ -9,9 +9,35 @@ import re
 from app.agent.base import AgentEvent
 
 _STOPWORDS = {
-    "find", "me", "buy", "get", "the", "a", "an", "for", "under", "below", "with",
-    "good", "best", "reliable", "return", "returns", "policy", "please", "i",
-    "want", "and", "inr", "rs", "budget", "size", "my", "of", "to", "it",
+    "find",
+    "me",
+    "buy",
+    "get",
+    "the",
+    "a",
+    "an",
+    "for",
+    "under",
+    "below",
+    "with",
+    "good",
+    "best",
+    "reliable",
+    "return",
+    "returns",
+    "policy",
+    "please",
+    "i",
+    "want",
+    "and",
+    "inr",
+    "rs",
+    "budget",
+    "size",
+    "my",
+    "of",
+    "to",
+    "it",
 }
 
 MAX_STEPS = 6

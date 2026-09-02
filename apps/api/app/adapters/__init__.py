@@ -22,6 +22,11 @@ def get_commerce_adapter(provider: str) -> CommerceAdapter:
         return ShopifyAdapter()
     if provider == "mock":
         return MockAdapter()
+    if provider == "web_live":
+        # Live-web abstraction for real (non-Shopify) storefronts (Fleet B1).
+        from app.adapters.commerce.web_live import WebLiveAdapter
+
+        return WebLiveAdapter()
     raise ValueError(f"Unknown commerce provider: {provider}")
 
 
@@ -35,9 +40,7 @@ def get_payment_provider() -> PaymentProvider:
     if settings.razorpay_key_id and settings.razorpay_key_secret:
         from app.adapters.payments.razorpay import RazorpayProvider
 
-        return RazorpayProvider(
-            key_id=settings.razorpay_key_id, key_secret=settings.razorpay_key_secret
-        )
+        return RazorpayProvider(key_id=settings.razorpay_key_id, key_secret=settings.razorpay_key_secret)
     return _mock_payment_singleton()
 
 

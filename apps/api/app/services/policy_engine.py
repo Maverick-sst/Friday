@@ -83,9 +83,7 @@ def evaluate(ctx: PolicyContext) -> PolicyDecision:
     )
 
     # 6. Currency alignment across quote/authorization/policy.
-    currency_ok = (
-        ctx.quote.currency == ctx.authorization.currency == ctx.policy.currency
-    )
+    currency_ok = ctx.quote.currency == ctx.authorization.currency == ctx.policy.currency
     add(
         rc.CURRENCY_MISMATCH,
         currency_ok,
@@ -97,8 +95,7 @@ def evaluate(ctx: PolicyContext) -> PolicyDecision:
     add(
         rc.FINAL_AMOUNT_EXCEEDS_BUYER_AUTHORIZATION,
         buyer_ok,
-        f"total {format_minor(total)} vs buyer limit "
-        f"{format_minor(ctx.authorization.max_amount_minor)}",
+        f"total {format_minor(total)} vs buyer limit {format_minor(ctx.authorization.max_amount_minor)}",
     )
 
     # 8. Merchant automatic-purchase ceiling.
@@ -106,8 +103,7 @@ def evaluate(ctx: PolicyContext) -> PolicyDecision:
     add(
         rc.FINAL_AMOUNT_EXCEEDS_MERCHANT_LIMIT,
         merchant_limit_ok,
-        f"total {format_minor(total)} vs merchant cap "
-        f"{format_minor(ctx.policy.max_auto_purchase)}",
+        f"total {format_minor(total)} vs merchant cap {format_minor(ctx.policy.max_auto_purchase)}",
     )
 
     # 9. Category allowed by merchant policy AND buyer constraints.

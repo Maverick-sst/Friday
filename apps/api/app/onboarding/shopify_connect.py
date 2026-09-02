@@ -96,9 +96,7 @@ def _unique_slug(db: Session, base: str) -> str:
 
 
 def mark_synced(db: Session, merchant_id: str) -> None:
-    integration = db.scalar(
-        select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant_id)
-    )
+    integration = db.scalar(select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant_id))
     if integration is not None:
         integration.last_synced_at = datetime.now(UTC)
         db.commit()

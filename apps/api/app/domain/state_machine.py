@@ -28,9 +28,7 @@ class InvalidTransition(Exception):
     def __init__(self, current: TransactionStatus, target: TransactionStatus) -> None:
         self.current = current
         self.target = target
-        super().__init__(
-            f"Invalid transaction transition {current.value} -> {target.value}"
-        )
+        super().__init__(f"Invalid transaction transition {current.value} -> {target.value}")
 
 
 def can_transition(current: TransactionStatus, target: TransactionStatus) -> bool:

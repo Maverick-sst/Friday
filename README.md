@@ -1,114 +1,129 @@
-# Agent Commerce Gateway
+# AI Commerce Strategy Team
 
-> Turn a normal Shopify merchant into an **AI-native merchant** — AI discoverable, AI interactable,
-> AI transactable — without rebuilding the human-facing storefront.
+> An **always-on AI strategy team for merchants**. Enter a store URL — get a
+> persistent fleet of specialist agents that researches your market, monitors
+> competitors, simulates AI buyers, tracks your reputation, and turns evidence
+> into prioritized, actionable strategy.
 
-Razorpay AI Buildathon · Track 01: AI Growth & Agentic Commerce · Shopify V0
+Razorpay AI Buildathon · Track 01 · pivoted from V0 (commerce gateway → strategy team, see `PRD_3.md`)
+
+> **Start here:** [`docs/DEEP_DIVE.md`](docs/DEEP_DIVE.md) — the complete build
+> document: every API, every design decision with its rationale, the full data
+> model, ASCII architecture diagrams, and the chronological bug log (25 entries)
+> explaining why non-obvious code exists.
 
 ## The one-line thesis
 
 ```
-The LLM can decide what it wants to attempt.
-It cannot unilaterally decide that money is allowed to move.
+The baseline is Day 0. The persistent AI team is the product.
 ```
 
 ## What this is
 
-A Merchant Agent Layer + Agent Commerce Gateway:
+1. A merchant onboards with a public store URL + an optional goal.
+2. A **Day-0 baseline** runs as a mission graph: business research,
+   competitor discovery, digital-presence scan and AI-buyer simulations —
+   in parallel — then Strategy synthesizes everything into a versioned
+   `BaselineSnapshot`.
+3. The merchant launches **missions** ("Why is Competitor X winning beginners?").
+   Missions are bounded units of work (budgets, timeouts, cancellation) and the
+   future unit of billing.
+4. Every claim lands as **Evidence → Findings → Recommendations** with full
+   provenance: source URLs, observation timestamps, confidence, and explicit
+   fact / inference / speculation tagging.
+5. **Counterfactual experiments** run the same simulated buyer cohort against
+   control vs variant messaging and report lift — always labeled `SIMULATED`,
+   never presented as real revenue.
+6. **Memory persists**: goals, competitor observations and experiment outcomes
+   feed every future mission.
 
-1. A Shopify merchant connects once (full OAuth). No website rebuild, no new catalog.
-2. Catalog data is normalized into a canonical commerce model and a **Merchant Agent Profile**.
-3. Buyer agents interact only through standardized capabilities:
-   `discover → search_products → get_product → get_quote → create_cart → checkout`.
-4. Quotes are **live snapshots**: price/inventory are revalidated at the source platform
-   before any payment decision (stale-data protection).
-5. Every checkout passes a **deterministic 12-rule policy engine** — effective spend cap is
-   `min(merchant limit, buyer authorization)`.
-6. Authorized payments execute through **Razorpay Test Mode** behind a `PaymentProvider` interface;
-   completed purchases push back to Shopify as draft orders.
-7. Every step lands in an auditable transaction timeline. Blocked transactions explain themselves.
+## The five specialists
 
-## Demo story
+| Agent | Mission |
+|---|---|
+| Market Intelligence | Category trends, new entrants, opportunities & threats |
+| Competitor Intelligence | Pricing, positioning, product changes, review sentiment |
+| AI Buyer Simulation | Realistic buyers complete purchase missions; report friction honestly |
+| Digital Presence | How the public web actually perceives the merchant |
+| Strategy | Synthesizes evidence into ranked recommendations + suggested next missions |
 
-| Scene | Where |
-| --- | --- |
-| Connect store / demo seed | **Connect Store** page |
-| AI-native profile appears | **AI-Native Profile** page |
-| Configure guardrails | **Policies** page |
-| "Find Nike Downshifter 14 size 9 under ₹5,000…" | **Agent Console** → Run Buyer Agent |
-| Policy passes → Razorpay test checkout → audit trail | console + **Transaction Trace** |
-| Price flips ₹4,799 → ₹5,799 after quote → BLOCKED, no payment call | Console with scenario *price change after quote* |
+Agents share one runtime contract (`app/agents/base.py`), scoped tool
+allowlists, bounded sub-agent fan-out (depth ≤ 1), and per-run budgets.
 
 ## Architecture
 
 ```
-apps/
-  api/     FastAPI modular monolith
-           ├── domain/      contracts, strict transaction state machine, reason codes
-           ├── db/          SQLAlchemy models + Alembic migrations (PRD §19)
-           ├── adapters/    commerce: MockAdapter | ShopifyAdapter (Admin GraphQL 2026-07)
-           │                payments: RazorpayProvider | deterministic mock
-           ├── services/    policy engine (pure), quotes, carts, checkout orchestrator, audit
-           ├── gateway/     the six agent-facing capabilities
-           ├── onboarding/  Shopify OAuth connect/callback/sync
-           ├── agent/       tool-calling buyer agent: scripted brain (zero keys)
-           │                or OpenAI-compatible LLM brain; SSE streaming
-           └── demo/        deterministic failure-injection scenarios
-  web/     React + Vite dashboard (Terminal Fintech design system)
-docs/      setup-shopify.md · setup-razorpay.md
+apps/api    FastAPI modular monolith
+  engine/   mission lifecycle, dual-driver queue (Redis ⇄ in-process),
+            executor w/ defensive state transitions, budgets, limits, SSE bus
+  agents/   contract + runtime; five specialists in intel/agents_def.py
+  tools/    Composio live plane (SEARCH/READ) + deterministic mock plane
+  llm/      provider-agnostic; OpenAI-compatible impl w/ model fallback chain
+  memory/   Mem0 adapter + local Postgres fallback behind one interface
+  intel/    baseline graph, evidence/findings/recs persistence, experiments
+  gateway/, transactions/, agent/, demo/   ← intact Legacy V0 commerce stack
+apps/web    React + Vite command center (design language borrowed from
+            aside.com: near-black surfaces, sky accent, eyebrow→headline→proof)
+docker-compose.yml   postgres + redis + api (embedded worker) + web
+docs/scaling.md      measured load-test results (PRD_3 §23.12)
 ```
 
-Key invariants (enforced server-side):
+Key invariants:
 
-- `Transaction.status` changes only via the state machine; `BLOCKED`/`PAYMENT_*` are terminal for V0.
-- Payment orders are created only from stored, live-validated quote amounts.
-- Checkout is idempotent — retries replay the first response, never double-pay.
-- Secrets (Shopify token, Razorpay keys) never leave the server.
+- PostgreSQL is durable truth; Redis is transient coordination only.
+- Every external call has timeout + backoff-with-jitter retries + trace ids.
+- Concurrent missions can't corrupt each other: conditional state transitions,
+  atomic budget claims, idempotent creation endpoints.
+- No mission is ever stuck RUNNING: wall-clock deadlines, cooperative cancel,
+  lease expiry requeue.
+- Simulated metrics are labeled SIMULATED end-to-end.
 
 ## Quickstart
 
 ```bash
-cp .env.example .env                      # fill creds when you have them
-docker compose up --build                 # postgres + api + web
+cp .env.example .env        # add STRATEGY_LLM_* (OpenRouter works), COMPOSIO_API_KEY, MEM0_API_KEY
+docker compose up --build   # postgres + redis + api + web
 ```
 
-Or by hand:
+- Command center: http://localhost:5173
+- API docs: http://localhost:8000/docs
+
+Bare-metal dev also works without Docker/Redis (in-process queue driver +
+SQLite):
 
 ```bash
-docker compose up db -d                   # Postgres on localhost:5439
-cd apps/api
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload             # http://localhost:8000/docs
-cd ../web && npm install && npm run dev   # http://localhost:5173
+cd apps/api && python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && alembic upgrade head
+uvicorn app.main:app --reload          # embedded worker starts automatically
+cd ../web && npm install && npm run dev
 ```
 
-No Docker yet? The API also runs on SQLite for development:
+Missing keys degrade gracefully: no LLM key → agents fail loudly but the
+engine stays healthy; no Composio → deterministic mock tool plane; no Mem0 →
+local memory adapter.
 
-```bash
-DATABASE_URL="sqlite:///./dev.db" uvicorn app.main:app --reload
-```
+## Demo story (PRD_3 §32)
 
-In development mode the API auto-seeds the mock merchant **Velocity Sports**
-(Nike Downshifter 14 size 9 @ ₹4,799 etc.), so the full demo works before any
-Shopify/Razorpay credentials exist.
-
-## Setup guides
-
-- Shopify Partner org + dev store + OAuth app: `docs/setup-shopify.md`
-- Razorpay Test Mode keys + test card flow: `docs/setup-razorpay.md`
+1. Onboard `https://some-store.in` (+ goal) → watch five agents work in parallel
+2. Baseline snapshot v1 written; open findings, drill into evidence
+3. Launch "Why is Competitor X outperforming us for beginners?"
+4. Watch fan-out execution, evidence accumulating live over SSE
+5. Strategy ranks recommendations; click "Launch it" on the suggested next mission
+6. Create a control/variant experiment → simulated lift, clearly labeled
 
 ## Tests
 
 ```bash
-cd apps/api && pytest            # 72 tests: unit + policy matrix + E2E scenarios
+cd apps/api && python -m pytest      # 99 tests: engine, agents, API, scenarios
 ```
 
-Scenario coverage mirrors PRD §31.3: valid purchases, price-mismatch blocks,
-inventory failures, policy violations — with the global property
-**0 unauthorized payment attempts**. Live numbers: `GET /api/v1/metrics`.
+Covers §34 scenarios: parallel missions, budget exhaustion, sub-agent bounds,
+timeout/cancel paths, unknown-handler failure, duplicate-execution safety,
+tool-failure degradation, strategy synthesis, experiment arms + labeling.
+
+Load validation: see `docs/scaling.md`.
 
 ## Status
 
-V0 complete per PRD §35 Definition of Done. See `PRD.md` for the full specification.
+PRD_3 MVP complete through Phase 11 (demo hardening). Legacy V0 gateway
+remains fully functional under the "V0 Commerce" nav section.

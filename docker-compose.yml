@@ -18,6 +18,17 @@ services:
       timeout: 3s
       retries: 12
 
+  redis:
+    image: redis:7-alpine
+    container_name: acg-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
   api:
     build:
       context: apps/api
@@ -27,11 +38,15 @@ services:
         required: false
     environment:
       DATABASE_URL: postgresql+psycopg://agent_commerce:agent_commerce@db:5432/agent_commerce
+      REDIS_URL: redis://redis:6379/0
       WEB_ORIGIN: http://localhost:5173
+      EMBEDDED_WORKER: "true"
     ports:
       - "8000:8000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./apps/api:/srv/api

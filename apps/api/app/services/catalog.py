@@ -38,19 +38,42 @@ def _to_contract(product: Product, variants: list[ProductVariant]) -> ProductCon
     )
 
 
-def search_products(
-    db: Session, merchant_id: str, req: SearchProductsRequest
-) -> list[ProductContract]:
+def _search_stmt(merchant_id: str, q: str, *, any_token: bool):
     stmt = select(Product).where(Product.merchant_id == merchant_id, Product.status == "active")
+    if not q:
+        return stmt
+    if any_token:
+        from sqlalchemy import or_
+
+        conds = [
+            Product.title.ilike(f"%{token}%")
+            | Product.brand.ilike(f"%{token}%")
+            | Product.category.ilike(f"%{token}%")
+            | Product.description.ilike(f"%{token}%")
+            for token in q.split()
+            if len(token) >= 3
+        ]
+        return stmt.where(or_(*conds)) if conds else stmt
+    like = f"%{q}%"
+    return stmt.where(
+        Product.title.ilike(like)
+        | Product.brand.ilike(like)
+        | Product.category.ilike(like)
+        | Product.description.ilike(like)
+    )
+
+
+def search_products(db: Session, merchant_id: str, req: SearchProductsRequest) -> list[ProductContract]:
     q = (req.query or "").strip().lower()
-    if q:
-        like = f"%{q}%"
-        stmt = stmt.where(
-            Product.title.ilike(like)
-            | Product.brand.ilike(like)
-            | Product.category.ilike(like)
-            | Product.description.ilike(like)
-        )
+    stmt = _search_stmt(merchant_id, q, any_token=False)
+    products = list(db.scalars(stmt.order_by(Product.title.asc()).limit(req.limit * 2)))
+    if not products and q and len(q.split()) > 1:
+        # Sparse live-web catalogs: materialized products may carry only a real
+        # title, so a full-phrase query (LLM/scripted brain wording) can miss
+        # them entirely. Fall back to ANY-token matching before reporting zero
+        # results — otherwise the buyer stops right after discovery.
+        stmt = _search_stmt(merchant_id, q, any_token=True)
+        products = list(db.scalars(stmt.order_by(Product.title.asc()).limit(req.limit * 2)))
     if req.filters.category:
         stmt = stmt.where(Product.category == req.filters.category)
     if req.filters.brand:
@@ -59,9 +82,7 @@ def search_products(
     products = list(db.scalars(stmt.order_by(Product.title.asc()).limit(req.limit * 2)))
     results: list[ProductContract] = []
     for product in products:
-        variant_rows = list(
-            db.scalars(select(ProductVariant).where(ProductVariant.product_id == product.id))
-        )
+        variant_rows = list(db.scalars(select(ProductVariant).where(ProductVariant.product_id == product.id)))
         if req.filters.available_only:
             variant_rows = [v for v in variant_rows if v.available_for_sale]
             if not variant_rows:

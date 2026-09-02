@@ -37,9 +37,7 @@ def _ctx(
         issued_at=now,
         expires_at=now + timedelta(minutes=30),
     )
-    product = Product(
-        merchant_id="m", title="Shoe", category=category, status="active", external_id="p1"
-    )
+    product = Product(merchant_id="m", title="Shoe", category=category, status="active", external_id="p1")
     variant = ProductVariant(
         product_id="x",
         external_id="v1",

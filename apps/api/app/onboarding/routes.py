@@ -65,9 +65,7 @@ def list_merchants(db: Session = Depends(get_db)):
 @router.get("/merchants/{merchant_id}/profile")
 def get_profile(merchant_id: str, db: Session = Depends(get_db)):
     merchant = _merchant_or_404(db, merchant_id)
-    integration = db.scalar(
-        select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant.id)
-    )
+    integration = db.scalar(select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant.id))
     profile = build_profile(db, merchant, integration=integration)
     payload = profile.model_dump()
     payload["storefront_status"] = merchant.status
@@ -153,9 +151,7 @@ def shopify_connect(req: ConnectStoreRequest, db: Session = Depends(get_db)):
 @router.post("/merchants/{merchant_id}/sync")
 def sync_merchant(merchant_id: str, db: Session = Depends(get_db)):
     merchant = _merchant_or_404(db, merchant_id)
-    integration = db.scalar(
-        select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant.id)
-    )
+    integration = db.scalar(select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant.id))
     if integration is None:
         raise not_found("INTEGRATION_MISSING", "Merchant has no commerce integration connected")
 

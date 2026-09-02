@@ -55,7 +55,56 @@ async def lifespan(app: FastAPI):
                     logger.info("dev autoseed created mock merchant")
         except Exception as exc:
             logger.warning(f"dev autoseed skipped: {exc}")
+
+    # Embedded strategy-team workers (single-process demo mode, PRD_3 §23.2).
+    # A supervisor restarts the worker if it ever dies unexpectedly.
+    worker_task = None
+    worker_stop = None
+    if settings.embedded_worker:
+        import asyncio
+
+        from app.engine import handlers  # noqa: F401  (register stub handler)
+        from app.intel.experiments import register_experiment_handler
+        from app.intel.handlers import register_all as register_intel
+
+        register_intel()
+        register_experiment_handler()
+        from app.engine.worker import run_worker
+
+        async def _supervise() -> None:
+            restarts = 0
+            while not worker_stop.is_set():
+                try:
+                    await run_worker(worker_stop)
+                    break  # clean stop requested
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    restarts += 1
+                    logger.exception("embedded worker crashed (restart #%d)", restarts)
+                    await asyncio.sleep(2.0)
+
+        worker_stop = asyncio.Event()
+        worker_task = asyncio.ensure_future(_supervise())
+        logger.info("embedded strategy-team supervisor started")
+
     yield
+
+    if worker_task is not None and worker_stop is not None:
+        worker_stop.set()
+        try:
+            await asyncio.wait_for(worker_task, timeout=10)
+        except Exception:
+            worker_task.cancel()
+        logger.info("embedded strategy-team supervisor stopped")
+
+    # Observability: flush buffered traces at shutdown (PRD 22/40).
+    try:
+        from app.observability import flush_telemetry
+
+        flush_telemetry()
+    except Exception:
+        pass
 
 
 def create_app() -> FastAPI:
@@ -91,19 +140,24 @@ def create_app() -> FastAPI:
     # --- Routers ---------------------------------------------------------------
     from app.agent.routes import router as agent_router
     from app.demo.routes import router as demo_router
+    from app.engine.routes import router as team_router
     from app.gateway.routes import router as gateway_router
     from app.onboarding.routes import router as onboarding_router
     from app.transactions.metrics import router as metrics_router
     from app.transactions.payments import router as payments_router
     from app.transactions.routes import router as transactions_router
 
-    app.include_router(onboarding_router)
-    app.include_router(gateway_router)
-    app.include_router(transactions_router)
-    app.include_router(metrics_router)
-    app.include_router(payments_router)
-    app.include_router(agent_router)
-    app.include_router(demo_router)
+    if settings.enable_legacy_routes:
+        app.include_router(onboarding_router)
+        app.include_router(gateway_router)
+        app.include_router(transactions_router)
+        app.include_router(metrics_router)
+        app.include_router(payments_router)
+        app.include_router(agent_router)
+        app.include_router(demo_router)
+
+    # Strategy-team engine (PRD_3).
+    app.include_router(team_router)
 
     return app
 

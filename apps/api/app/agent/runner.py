@@ -17,7 +17,12 @@ from app.demo.scenarios import maybe_apply_pre_checkout
 
 def make_brain(intent: str, constraints: dict):
     settings = get_settings()
-    if settings.agent_llm_api_key and settings.agent_llm_base_url:
+    # Try the LLM brain first: AGENT_LLM_* credentials, or the strategy fleet's
+    # STRATEGY_LLM_* as a fallback (B4). Falls back to the deterministic
+    # ScriptedBrain when no LLM credentials exist at all.
+    if (settings.agent_llm_api_key or settings.strategy_llm_api_key) and (
+        settings.agent_llm_base_url or settings.strategy_llm_base_url
+    ):
         try:
             from app.agent.llm_brain import LLMBrain
 
@@ -31,7 +36,7 @@ def _label_for(tool: Tool, args: dict) -> str:
     if tool.name == "discover_merchant":
         return "Discovering merchant profile..."
     if tool.name == "search_products":
-        return f"Searching catalog for \"{args.get('query', '')}\""
+        return f'Searching catalog for "{args.get("query", "")}"'
     if tool.name == "get_product":
         return "Fetching product details"
     if tool.name == "get_quote":

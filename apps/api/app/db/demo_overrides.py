@@ -26,9 +26,7 @@ class DemoOverride(Base, TimestampMixin):
     note: Mapped[str | None] = mapped_column(String(255))
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    def apply(
-        self, price_minor: int, available: bool, quantity: int | None
-    ) -> tuple[int, bool, int | None]:
+    def apply(self, price_minor: int, available: bool, quantity: int | None) -> tuple[int, bool, int | None]:
         if self.price_minor is not None:
             price_minor = self.price_minor
         if self.available_for_sale is not None:

@@ -59,9 +59,7 @@ def list_overrides(merchant_id: str, db: Session = Depends(get_db)):
     merchant = _merchant_or_404(db, merchant_id)
     rows = list(
         db.scalars(
-            select(DemoOverride).where(
-                DemoOverride.merchant_id == merchant.id, DemoOverride.active.is_(True)
-            )
+            select(DemoOverride).where(DemoOverride.merchant_id == merchant.id, DemoOverride.active.is_(True))
         )
     )
     return {
@@ -143,9 +141,7 @@ def reset_overrides(merchant_id: str, db: Session = Depends(get_db)):
     merchant = _merchant_or_404(db, merchant_id)
     rows = list(
         db.scalars(
-            select(DemoOverride).where(
-                DemoOverride.merchant_id == merchant.id, DemoOverride.active.is_(True)
-            )
+            select(DemoOverride).where(DemoOverride.merchant_id == merchant.id, DemoOverride.active.is_(True))
         )
     )
     for row in rows:

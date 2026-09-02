@@ -47,9 +47,7 @@ class ShopifyAdapter:
             )
         )
         if integration is None or not integration.auth_reference_encrypted:
-            raise GatewayError(
-                "SHOPIFY_NOT_CONNECTED", "No Shopify token stored for merchant", 409
-            )
+            raise GatewayError("SHOPIFY_NOT_CONNECTED", "No Shopify token stored for merchant", 409)
         return decrypt_secret(integration.auth_reference_encrypted)
 
     def _store_host(self, db: Session, merchant_id: str) -> str:
@@ -60,9 +58,7 @@ class ShopifyAdapter:
             )
         )
         if integration is None or not integration.store_url:
-            raise GatewayError(
-                "SHOPIFY_NOT_CONNECTED", "No Shopify store bound to merchant", 409
-            )
+            raise GatewayError("SHOPIFY_NOT_CONNECTED", "No Shopify store bound to merchant", 409)
         return integration.store_url.replace("https://", "").strip("/")
 
     def _graphql(
@@ -186,9 +182,10 @@ class ShopifyAdapter:
             for key, val in values.items():
                 setattr(row, key, val)
 
-        existing = {v.external_id: v for v in db.scalars(
-            select(ProductVariant).where(ProductVariant.product_id == row.id)
-        )}
+        existing = {
+            v.external_id: v
+            for v in db.scalars(select(ProductVariant).where(ProductVariant.product_id == row.id))
+        }
         variants = (prod.get("variants") or {}).get("nodes") or []
         for var in variants:
             price_minor, currency = self._money_minor(var["price"])
@@ -240,9 +237,7 @@ class ShopifyAdapter:
             _DRAFT_ORDER_CREATE_MUTATION,
             {
                 "input": {
-                    "lineItems": [
-                        {"variantId": order["variant_gid"], "quantity": order.get("quantity", 1)}
-                    ],
+                    "lineItems": [{"variantId": order["variant_gid"], "quantity": order.get("quantity", 1)}],
                     "note": f"Agent Commerce txn {order.get('txn_ref')}",
                     "tags": ["agent-commerce"],
                 }

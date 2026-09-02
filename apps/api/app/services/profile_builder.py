@@ -1,6 +1,5 @@
 """Builds the canonical Merchant Agent Profile from DB rows (PRD §10)."""
 
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

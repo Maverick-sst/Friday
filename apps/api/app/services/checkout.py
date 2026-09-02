@@ -234,9 +234,15 @@ def _block(
         actor=Actor.POLICY_ENGINE,
         payload={"reason_codes": reason_codes, "explanation": explanation},
     )
-    record_event(txn_service.db, txn.id, EventType.TRANSACTION_BLOCKED, Actor.SYSTEM, {
-        "reason_codes": reason_codes,
-    })
+    record_event(
+        txn_service.db,
+        txn.id,
+        EventType.TRANSACTION_BLOCKED,
+        Actor.SYSTEM,
+        {
+            "reason_codes": reason_codes,
+        },
+    )
     txn_service.db.commit()
     return {
         "status": TransactionStatus.BLOCKED.value,
@@ -299,10 +305,16 @@ def complete_payment(
         }
 
     # Signature verified -> payment authorized at the provider.
-    record_event(db, txn.id, EventType.PAYMENT_AUTHORIZED, Actor.PAYMENT_PROVIDER, {
-        "payment_id": payment_id,
-        "order_id": stored_order or order_id,
-    })
+    record_event(
+        db,
+        txn.id,
+        EventType.PAYMENT_AUTHORIZED,
+        Actor.PAYMENT_PROVIDER,
+        {
+            "payment_id": payment_id,
+            "order_id": stored_order or order_id,
+        },
+    )
 
     capture = None
     settings = get_settings()
@@ -352,9 +364,7 @@ def complete_payment(
 
 
 def _provider_of(db: Session, merchant: Merchant) -> str:
-    integration = db.scalar(
-        select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant.id)
-    )
+    integration = db.scalar(select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant.id))
     return integration.provider if integration else "mock"
 
 

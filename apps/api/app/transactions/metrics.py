@@ -36,7 +36,7 @@ def metrics(db: Session = Depends(get_db)):
     )
     for event in eval_events:
         policy_evals += 1
-        codes = ((event.payload_json or {}).get("reason_codes") or [])
+        codes = (event.payload_json or {}).get("reason_codes") or []
         if "PRICE_CHANGED_SINCE_QUOTE" in codes:
             price_mismatch_events += 1
 
@@ -72,10 +72,5 @@ def metrics(db: Session = Depends(get_db)):
 
 
 def _audit_coverage(db: Session, total: int) -> float:
-    with_events = int(
-        db.scalar(
-            select(func.count(func.distinct(TransactionEvent.transaction_id)))
-        )
-        or 0
-    )
+    with_events = int(db.scalar(select(func.count(func.distinct(TransactionEvent.transaction_id)))) or 0)
     return round(with_events / total, 4)

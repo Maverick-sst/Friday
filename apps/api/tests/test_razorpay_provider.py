@@ -54,12 +54,13 @@ class TestRazorpayProvider:
 
     def test_signature_verification_roundtrip(self, provider):
         p, _ = provider
-        sig = hmac.new(
-            KEY_SECRET.encode(), b"order_1|pay_1", hashlib.sha256
-        ).hexdigest()
-        assert p.verify_payment_signature(
-            razorpay_order_id="order_1", razorpay_payment_id="pay_1", razorpay_signature=sig
-        ).verified is True
+        sig = hmac.new(KEY_SECRET.encode(), b"order_1|pay_1", hashlib.sha256).hexdigest()
+        assert (
+            p.verify_payment_signature(
+                razorpay_order_id="order_1", razorpay_payment_id="pay_1", razorpay_signature=sig
+            ).verified
+            is True
+        )
         assert (
             p.verify_payment_signature(
                 razorpay_order_id="order_1",

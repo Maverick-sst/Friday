@@ -56,9 +56,7 @@ class MockPaymentProvider:
             # The mock stands in for the hosted Checkout: any payment id
             # presented for a known order is treated as a sandbox success.
             if record is None:
-                return PaymentVerification(
-                    verified=False, reason="unknown mock order/payment pair"
-                )
+                return PaymentVerification(verified=False, reason="unknown mock order/payment pair")
         if record["status"] == "failed":
             return PaymentVerification(
                 verified=False,

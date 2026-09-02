@@ -74,9 +74,7 @@ def discover(merchant_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{merchant_id}/search")
-def search_products(
-    merchant_id: str, req: SearchProductsRequest, db: Session = Depends(get_db)
-):
+def search_products(merchant_id: str, req: SearchProductsRequest, db: Session = Depends(get_db)):
     merchant = _merchant_or_404(db, merchant_id)
     results = catalog_service.search_products(db, merchant.id, req)
 
@@ -171,8 +169,7 @@ def capabilities(merchant_id: str, db: Session = Depends(get_db)):
     return {
         "merchant_id": merchant.slug,
         "capabilities": [
-            {"name": r.capability_name, "enabled": r.enabled, "version": r.version}
-            for r in rows
+            {"name": r.capability_name, "enabled": r.enabled, "version": r.version} for r in rows
         ],
     }
 

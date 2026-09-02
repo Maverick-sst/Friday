@@ -86,9 +86,7 @@ def verify_callback_hmac(query_params: dict[str, str]) -> bool:
     provided = query_params.get("hmac", "")
     if not provided:
         return False
-    message = "&".join(
-        f"{k}={v}" for k, v in sorted(query_params.items()) if k not in ("hmac", "signature")
-    )
+    message = "&".join(f"{k}={v}" for k, v in sorted(query_params.items()) if k not in ("hmac", "signature"))
     expected = _sign(message.encode())
     return hmac.compare_digest(provided, expected)
 

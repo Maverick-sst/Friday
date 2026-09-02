@@ -35,9 +35,7 @@ def _new_quote_ref() -> str:
 
 
 def resolve_adapter(db: Session, merchant_id: str):
-    integration = db.scalar(
-        select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant_id)
-    )
+    integration = db.scalar(select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant_id))
     provider = integration.provider if integration else "mock"
     return get_commerce_adapter(provider)
 

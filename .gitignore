@@ -1,36 +1,71 @@
 # --- Python ---
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
+.eggs/
 .venv/
 venv/
+env/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.pytype/
 htmlcov/
 .coverage
+.coverage.*
+coverage.xml
 
 # --- Node ---
 node_modules/
 dist/
+build/
 *.local
+.npm/
+.eslintcache
+*.tsbuildinfo
+.vite/
 
 # --- Env & secrets ---
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials.json
 
-# --- Databases / infra ---
+# --- Databases / infra / runtime state ---
 pgdata/
 *.sqlite3
 *.db
+*.sqlite3-journal
+.redis/
+docker-compose.override.yml
+
+# --- Logs ---
+logs/
+*.log
+*.log.*
+npm-debug.log*
+yarn-error.log*
 
 # --- Editors / OS ---
 .vscode/
 .idea/
 .DS_Store
+Thumbs.db
 *.swp
+*.swo
+*~
 
-# --- Build artifacts ---
-build/
-*.log
+# --- Test / demo artifacts ---
+.playwright/
+/screenshots/
+*.har
+.attachments/
+
+
+prds/

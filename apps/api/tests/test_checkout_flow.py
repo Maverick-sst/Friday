@@ -201,8 +201,7 @@ class TestBlockedPaths:
         )
         assert result["blocked"] is True
         assert any(
-            code in result["reason_codes"]
-            for code in ("VARIANT_UNAVAILABLE", "INVENTORY_UNAVAILABLE")
+            code in result["reason_codes"] for code in ("VARIANT_UNAVAILABLE", "INVENTORY_UNAVAILABLE")
         )
 
     def test_over_budget_product_blocked_by_buyer_limit(self, seeded):

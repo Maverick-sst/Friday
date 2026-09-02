@@ -1,6 +1,5 @@
 """Shopify adapter + OAuth tests with a mocked GraphQL transport."""
 
-
 import json
 
 import httpx
@@ -47,9 +46,7 @@ def _shopify_payload(query: str, variables: dict) -> dict:
                             "vendor": "Nike",
                             "status": "ACTIVE",
                             "onlineStoreUrl": None,
-                            "featuredMedia": {
-                                "preview": {"image": {"url": "https://cdn/img.jpg"}}
-                            },
+                            "featuredMedia": {"preview": {"image": {"url": "https://cdn/img.jpg"}}},
                             "variants": {
                                 "nodes": [
                                     {

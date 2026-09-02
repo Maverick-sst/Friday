@@ -31,14 +31,30 @@ MOCK_CATALOG: list[dict[str, Any]] = [
         "product_url": "https://mock.velocity-sports.test/products/downshifter-14",
         "image_url": "https://mock.velocity-sports.test/images/downshifter-14.jpg",
         "variants": [
-            {"external_id": "mock-var-ds-8-black", "options": {"size": "8", "color": "Black"},
-             "price_minor": 479900, "quantity": 12},
-            {"external_id": "mock-var-ds-9-black", "options": {"size": "9", "color": "Black"},
-             "price_minor": 479900, "quantity": 8},
-            {"external_id": "mock-var-ds-9-white", "options": {"size": "9", "color": "White"},
-             "price_minor": 479900, "quantity": 0},
-            {"external_id": "mock-var-ds-10-black", "options": {"size": "10", "color": "Black"},
-             "price_minor": 479900, "quantity": 5},
+            {
+                "external_id": "mock-var-ds-8-black",
+                "options": {"size": "8", "color": "Black"},
+                "price_minor": 479900,
+                "quantity": 12,
+            },
+            {
+                "external_id": "mock-var-ds-9-black",
+                "options": {"size": "9", "color": "Black"},
+                "price_minor": 479900,
+                "quantity": 8,
+            },
+            {
+                "external_id": "mock-var-ds-9-white",
+                "options": {"size": "9", "color": "White"},
+                "price_minor": 479900,
+                "quantity": 0,
+            },
+            {
+                "external_id": "mock-var-ds-10-black",
+                "options": {"size": "10", "color": "Black"},
+                "price_minor": 479900,
+                "quantity": 5,
+            },
         ],
     },
     {
@@ -50,10 +66,18 @@ MOCK_CATALOG: list[dict[str, Any]] = [
         "product_url": "https://mock.velocity-sports.test/products/revolution-7",
         "image_url": "https://mock.velocity-sports.test/images/revolution-7.jpg",
         "variants": [
-            {"external_id": "mock-var-rv-9-black", "options": {"size": "9", "color": "Black"},
-             "price_minor": 369500, "quantity": 15},
-            {"external_id": "mock-var-rv-10-grey", "options": {"size": "10", "color": "Grey"},
-             "price_minor": 369500, "quantity": 6},
+            {
+                "external_id": "mock-var-rv-9-black",
+                "options": {"size": "9", "color": "Black"},
+                "price_minor": 369500,
+                "quantity": 15,
+            },
+            {
+                "external_id": "mock-var-rv-10-grey",
+                "options": {"size": "10", "color": "Grey"},
+                "price_minor": 369500,
+                "quantity": 6,
+            },
         ],
     },
     {
@@ -65,8 +89,12 @@ MOCK_CATALOG: list[dict[str, Any]] = [
         "product_url": "https://mock.velocity-sports.test/products/ultrabounce",
         "image_url": "https://mock.velocity-sports.test/images/ultrabounce.jpg",
         "variants": [
-            {"external_id": "mock-var-ub-9-white", "options": {"size": "9", "color": "White"},
-             "price_minor": 549900, "quantity": 4},
+            {
+                "external_id": "mock-var-ub-9-white",
+                "options": {"size": "9", "color": "White"},
+                "price_minor": 549900,
+                "quantity": 4,
+            },
         ],
     },
 ]
@@ -131,9 +159,7 @@ class MockAdapter:
     def live_validate_variant(
         self, db: Session, merchant_id: str, variant_external_id: str
     ) -> LiveVariantState:
-        row = db.scalar(
-            select(ProductVariant).where(ProductVariant.external_id == variant_external_id)
-        )
+        row = db.scalar(select(ProductVariant).where(ProductVariant.external_id == variant_external_id))
         if row is None:
             raise LookupError(f"variant not found at source: {variant_external_id}")
 

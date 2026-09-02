@@ -59,9 +59,7 @@ def db_scalar_integration(db, merchant_id):
 
     from app.db.models import MerchantIntegration
 
-    return db.scalar(
-        select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant_id)
-    )
+    return db.scalar(select(MerchantIntegration).where(MerchantIntegration.merchant_id == merchant_id))
 
 
 def _search(ctx: ToolContext, args: dict) -> dict:
